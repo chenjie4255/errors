@@ -198,6 +198,21 @@ func TestWithMessage(t *testing.T) {
 	}
 }
 
+func TestWithTag(t *testing.T) {
+	err := New("root error")
+	err = Tag(err, 100)
+	if !FindTag(err, 100) {
+		t.Fatal("should have tag 100")
+	}
+	err = Tag(err, 200)
+	if !FindTag(err, 200) {
+		t.Fatal("should have tag 200")
+	}
+	if FindTag(err, 102) {
+		t.Fatal("should not have tag 102")
+	}
+}
+
 // errors.New, etc values are not expected to be compared by value
 // but the change in errors#27 made them incomparable. Assert that
 // various kinds of errors have a functional equality operator, even

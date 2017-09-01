@@ -191,6 +191,46 @@ func Wrap(err error, message string) error {
 	}
 }
 
+func Tag(err error, tag int) error {
+	if err == nil {
+		return nil
+	}
+	err = &withTag{
+		cause: err,
+		tag:   tag,
+	}
+	return &withStack{
+		err,
+		callers(),
+	}
+}
+
+type withTag struct {
+	cause error
+	tag   int
+}
+
+func (w *withTag) Error() string {
+	return w.cause.Error()
+}
+
+func (w *withTag) Cause() error {
+	return w.cause
+}
+
+func (w *withTag) Format(s fmt.State, verb rune) {
+	switch verb {
+	case 'v':
+		if s.Flag('+') {
+			fmt.Fprintf(s, "%+v\n", w.Cause())
+			return
+		}
+		fallthrough
+	case 's', 'q':
+		io.WriteString(s, w.Error())
+	}
+}
+
 // Wrapf returns an error annotating err with a stack trace
 // at the point Wrapf is call, and the format specifier.
 // If err is nil, Wrapf returns nil.
@@ -266,4 +306,22 @@ func Cause(err error) error {
 		err = cause.Cause()
 	}
 	return err
+}
+
+func FindTag(err error, tag int) bool {
+	type causer interface {
+		Cause() error
+	}
+	for err != nil {
+		cause, ok := err.(causer)
+		if !ok {
+			break
+		}
+		t, ok := err.(*withTag)
+		if ok && t.tag == tag {
+			return true
+		}
+		err = cause.Cause()
+	}
+	return false
 }
