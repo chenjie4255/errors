@@ -105,6 +105,14 @@ func New(message string) error {
 	}
 }
 
+func NewWithTag(message string, tag int) error {
+	err := &fundamental{
+		msg:   message,
+		stack: callers(),
+	}
+	return Tag(err, tag)
+}
+
 // Errorf formats according to a format specifier and returns the string
 // as a value that satisfies error.
 // Errorf also records the stack trace at the point it was called.
@@ -324,4 +332,22 @@ func FindTag(err error, tag int) bool {
 		err = cause.Cause()
 	}
 	return false
+}
+
+func GetTag(err error) int {
+	type causer interface {
+		Cause() error
+	}
+	for err != nil {
+		cause, ok := err.(causer)
+		if !ok {
+			break
+		}
+		t, ok := err.(*withTag)
+		if ok {
+			return t.tag
+		}
+		err = cause.Cause()
+	}
+	return 0
 }
